@@ -17,6 +17,8 @@ DATASET_SIZE = 0.01
 SHOW_N_SCORES = 5
 MODEL_NAME = "distilbert-base-uncased"
 OUTPUT_DIR = "../models/proto1"
+EPOCHS = 4
+BATCH_SIZE = 64
 
 GENERAL_DOMAIN = 'gen'
 
@@ -131,9 +133,9 @@ model = AutoModelForTokenClassification.from_pretrained(
 training_args = TrainingArguments(
     output_dir=OUTPUT_DIR,
     learning_rate=2e-5,
-    per_device_train_batch_size=8,
-    per_device_eval_batch_size=8,
-    num_train_epochs=2,
+    per_device_train_batch_size=BATCH_SIZE,
+    per_device_eval_batch_size=BATCH_SIZE,
+    num_train_epochs=EPOCHS,
     weight_decay=0.01,
     evaluation_strategy="epoch",
     save_strategy="no",
