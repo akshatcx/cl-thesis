@@ -12,7 +12,6 @@ import torch
 import numpy as np
 from transformers import Pipeline
 
-CORES = 4
 SENTS_TO_COMBINE = 3
 DATASET_SIZE = 0.01
 SHOW_N_SCORES = 5
@@ -120,8 +119,8 @@ def compute_metrics(p):
     }
 
 # main
-
 raw_dataset = fetch_20news()
+
 d = create_dataset(raw_dataset)
 dd = d.map(tokenize_and_align_labels, batched=True)
 
@@ -153,6 +152,8 @@ trainer = Trainer(
 
 trainer.train()
 trainer.save_model()
+
+print(f"training complete, model saved to {OUTPUT_DIR}")
 
 
 # inference pipeline
@@ -186,3 +187,4 @@ trainer.save_model()
 #         return tokens
     
 # classifier = DTEPipeline(model = model, tokenizer = tokenizer)
+# classifier("this is a sentence")
