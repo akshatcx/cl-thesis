@@ -139,7 +139,6 @@ training_args = TrainingArguments(
     weight_decay=0.01,
     evaluation_strategy="epoch",
     save_strategy="no",
-    use_mps_device=torch.backends.mps.is_available()
 )
 
 trainer = Trainer(
