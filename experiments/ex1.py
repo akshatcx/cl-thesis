@@ -13,7 +13,7 @@ import numpy as np
 from transformers import Pipeline
 
 SENTS_TO_COMBINE = 3
-DATASET_SIZE = 0.01
+DATASET_SHARDS = 100
 SHOW_N_SCORES = 5
 MODEL_NAME = "distilbert-base-uncased"
 OUTPUT_DIR = "../models/proto1"
@@ -43,7 +43,7 @@ def fetch_20news():
     label2id = {v: k for k, v in id2label.items()}
     
     dataset = Dataset.from_dict({'text': newsgroups.data, 'target': newsgroups.target})
-    return dataset.shuffle().shard(num_shards=1/DATASET_SIZE, index=0)
+    return dataset.shuffle().shard(num_shards=DATASET_SHARDS, index=0)
  
 def generateLabels(row):
     text = row['text']
