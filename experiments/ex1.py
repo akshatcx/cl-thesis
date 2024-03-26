@@ -17,7 +17,7 @@ SENTS_TO_COMBINE = 3
 DATASET_SHARDS = 100
 SHOW_N_SCORES = 5
 MODEL_NAME = "distilbert-base-uncased"
-OUTPUT_DIR = "../models/proto1"
+OUTPUT_DIR = "../models/proto-ex1"
 EPOCHS = 4
 BATCH_SIZE = 64
 
