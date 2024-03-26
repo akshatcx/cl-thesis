@@ -19,7 +19,7 @@ SHOW_N_SCORES = 5
 MODEL_NAME = "distilbert-base-uncased"
 OUTPUT_DIR = "../models/proto-ex1"
 EPOCHS = 4
-BATCH_SIZE = 64
+BATCH_SIZE = 8
 
 GENERAL_DOMAIN = 'general'
 
