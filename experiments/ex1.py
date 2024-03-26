@@ -1,4 +1,3 @@
-from sklearn.datasets import fetch_20newsgroups
 from datasets import Dataset
 from transformers import AutoTokenizer
 import spacy
@@ -7,10 +6,12 @@ import random
 from itertools import chain
 from transformers import DataCollatorForTokenClassification
 from transformers import AutoModelForTokenClassification, TrainingArguments, Trainer
-import evaluate
 import torch
 import numpy as np
 from transformers import Pipeline
+import requests
+import evaluate
+from datasets import load_dataset, concatenate_datasets
 
 SENTS_TO_COMBINE = 3
 DATASET_SHARDS = 100
@@ -20,58 +21,51 @@ OUTPUT_DIR = "../models/proto1"
 EPOCHS = 4
 BATCH_SIZE = 64
 
-GENERAL_DOMAIN = 'gen'
+GENERAL_DOMAIN = 'general'
 
-label_list = []
-id2label = {}
-label2id = {}
+COMMON_WORDS = set(requests.get('https://raw.githubusercontent.com/dariusk/corpora/master/data/words/common.json').json()['commonWords'])
 
 nlp = spacy.load('en_core_web_md')
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 data_collator = DataCollatorForTokenClassification(tokenizer=tokenizer)
 seqeval = evaluate.load("seqeval")
 
-def fetch_20news():
-    newsgroups = fetch_20newsgroups(subset='all')
+split_dataset = load_dataset("SetFit/bbc-news")
+dataset = concatenate_datasets([split_dataset['train'], split_dataset['test']])
+dataset = dataset.shuffle()
 
-    global label_list
-    global id2label
-    global label2id
-    label_list = newsgroups.target_names
-    label_list.append(GENERAL_DOMAIN)
-    id2label = {i: label for i, label in enumerate(label_list)}
-    label2id = {v: k for k, v in id2label.items()}
-    
-    dataset = Dataset.from_dict({'text': newsgroups.data, 'target': newsgroups.target})
-    return dataset.shuffle().shard(num_shards=DATASET_SHARDS, index=0)
- 
-def generateLabels(row):
-    text = row['text']
-    text = text.replace('\n', ' ')
-    
-    doc = nlp(text)
+label_list = list(set(dataset['label_text']))
+label_list.append(GENERAL_DOMAIN)
+id2label = {i: label for i, label in enumerate(label_list)}
+label2id = {v: k for k, v in id2label.items()}
 
+def extract_sents(raw_dataset: Dataset):
+  all_sents = []
+
+  for row in raw_dataset:
+    doc = nlp(row['text'])
     sents = []
+
     for sent in doc.sents:
-        lsent = []
-        for w in sent:
-            if w.text.isspace(): continue
-            elif w.text in punctuation or w.is_stop: lsent.append([w.text, label2id[GENERAL_DOMAIN]])
-            else: lsent.append([w.text, row['target']])
-        sents.append(list(map(list, zip(*lsent))))
-    return sents
+      labelled = []
+      for w in sent:
+        if w.text.isspace(): continue
+        elif w.text in punctuation or w.text in COMMON_WORDS:
+          labelled.append([w.text, label2id[GENERAL_DOMAIN]])
+        else:
+          labelled.append([w.text, row['label']])
+      sents.append(list(map(list, zip(*labelled))))
 
-def create_dataset(raw_dataset: Dataset):
-    sents = []
-    for row in raw_dataset: sents.extend(generateLabels(row))
+    all_sents.extend(sents)
+    random.shuffle(all_sents)
+  return all_sents
 
-    # combine sents 
+def combine_sents(sents):
     tokens = []
     tags = []
-    random.shuffle(sents)
-    csents = [sents[n:n+SENTS_TO_COMBINE] for n in range(0, len(sents), SENTS_TO_COMBINE)]
-    for i in range(len(csents)):
-        k = [list(chain.from_iterable(x)) for x in zip(*csents[i])]
+    combined = [sents[n:n+SENTS_TO_COMBINE] for n in range(0, len(sents), SENTS_TO_COMBINE)]
+    for i in range(len(combined)):
+        k = [list(chain.from_iterable(x)) for x in zip(*combined[i])]
         if(len(k) == 2):
             tokens.append(k[0])
             tags.append(k[1])
@@ -121,10 +115,10 @@ def compute_metrics(p):
     }
 
 # main
-raw_dataset = fetch_20news()
+sents = extract_sents(dataset['train'].shard(num_shards=DATASET_SHARDS, index=0))
+d = combine_sents(sents)
 
-d = create_dataset(raw_dataset)
-dd = d.map(tokenize_and_align_labels, batched=True)
+df = d.map(tokenize_and_align_labels, batched=True)
 
 model = AutoModelForTokenClassification.from_pretrained(
    MODEL_NAME, num_labels=len(label_list), id2label=id2label, label2id=label2id
@@ -144,13 +138,12 @@ training_args = TrainingArguments(
 trainer = Trainer(
     model=model,
     args=training_args,
-    train_dataset=dd["train"],
-    eval_dataset=dd["test"],
+    train_dataset=df["train"],
+    eval_dataset=df["test"],
     tokenizer=tokenizer,
     data_collator=data_collator,
     compute_metrics=compute_metrics,
 )
-
 trainer.train()
 trainer.save_model()
 
