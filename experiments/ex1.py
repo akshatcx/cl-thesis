@@ -115,7 +115,9 @@ def compute_metrics(p):
     }
 
 # main
-sents = extract_sents(dataset['train'].shard(num_shards=DATASET_SHARDS, index=0))
+print("extracting sents from dataset...")
+sents = extract_sents(dataset.shard(num_shards=DATASET_SHARDS, index=0))
+print(f"extracted {len(sents)} sentences.")
 d = combine_sents(sents)
 
 df = d.map(tokenize_and_align_labels, batched=True)
