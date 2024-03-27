@@ -34,7 +34,7 @@ split_dataset = load_dataset("SetFit/bbc-news")
 dataset = concatenate_datasets([split_dataset['train'], split_dataset['test']])
 dataset = dataset.shuffle()
 
-label_list = list(set(dataset['label_text']))
+label_list = ['tech', 'business', 'sport', 'entertainment', 'politics']
 label_list.append(GENERAL_DOMAIN)
 id2label = {i: label for i, label in enumerate(label_list)}
 label2id = {v: k for k, v in id2label.items()}
