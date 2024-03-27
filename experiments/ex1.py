@@ -50,7 +50,7 @@ def extract_sents(raw_dataset: Dataset):
       labelled = []
       for w in sent:
         if w.text.isspace(): continue
-        elif w.text in punctuation or w.text in COMMON_WORDS:
+        elif w.text in punctuation or w.is_stop or w.text in COMMON_WORDS:
           labelled.append([w.text, label2id[GENERAL_DOMAIN]])
         else:
           labelled.append([w.text, row['label']])
